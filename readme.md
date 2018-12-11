@@ -12,6 +12,8 @@ npm install --save koa-ratelimit-redis
 const Redis = require('ioredis')
 const RateLimit = require('koa-ratelimit-redis').RateLimit
 const RedisStore = require('koa-ratelimit-redis').RedisStore
+const Koa = require('koa')
+const router = require('koa-router')()
 
 const client = new Redis({
     host: '127.0.0.1',
@@ -31,7 +33,7 @@ function koaHandler(ctx) {
     }
 }
 
-exports.defaultRateLimiter = function defaultRateLimiter(max = 5, expiry = 60, handler = koaHandler) {
+function defaultRateLimiter(max = 5, expiry = 60, handler = koaHandler) {
     return new RateLimit({
         store: new RedisStore({
             client,
@@ -52,12 +54,18 @@ function doHello(ctx) {
     ctx.body = 'hello world'
 }
 
-app.get('/hello', defaultRateLimiter(), doHello)
-app.get('/world', defaultRateLimiter(1, 30, (ctx) => {
+const app = new Koa()
+
+router.get('/hello', defaultRateLimiter(), doHello)
+router.get('/world', defaultRateLimiter(1, 30, (ctx) => {
     ctx.body = {
         msg: 'RATE_LIMIT'
     }
 }), doHello)
+
+app.use(router.middleware())
+
+app.listen(8080)
 
 ```
 
